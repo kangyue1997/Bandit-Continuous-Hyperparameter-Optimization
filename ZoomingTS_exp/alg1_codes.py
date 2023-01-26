@@ -99,7 +99,7 @@ def zooming(sigma, T, simulator, points = [], inte = [0,1]):
     return regret, cum_regret
 
 
-con = 1
+con = 0.5
 
 def zooming_tsr(sigma, T, simulator, H, inte = [0,1], prior = False):
     if not prior:
