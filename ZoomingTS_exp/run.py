@@ -18,7 +18,7 @@ parser.add_argument('-H', '--H', type=int, default=24000, help='epoch size for r
 parser.add_argument('-sigma', '--sigma', type=float, default=math.sqrt(0.1), help='noise sub gaussian parameter')
 parser.add_argument('-funtype', '--funtype', type=str, default='triangle', help='lipschitz function type: triangle or sine')
 parser.add_argument('-peakcan', '--peakcan', nargs='+', default=[0.05,0.45,0.7,0.95], help='peak candidates')
-parser.add_argument('-points', '--points', nargs='+', default=[22861, 47734, 74817], help='change points for data generation, type 0 for no change point')
+parser.add_argument('-points', '--points', nargs='+', default=[22761, 47734, 70317], help='change points for data generation, type 0 for no change point')
 parser.add_argument('-save', '--save', type=str, default='False', help='save the data or not')
 parser.add_argument('-para', '--para', type=str, default='True', help='parallel computing')
 parser.add_argument('-inte', '--inte', nargs = '+', default = [0,1], help = 'exploration intervals')
