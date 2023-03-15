@@ -165,103 +165,48 @@ class LinUCB:
             explore = explore_rates[index]
         return regret
 
-    # def linucb_auto_3layer(self, explore_rates, lamdas):
-    #     T = self.T
-    #     d = self.data.d
-    #     regret = np.zeros(T)
-    #     xr = np.zeros(d)
-    #     theta_hat = np.zeros(d)
-    #
-    #     # initialization for exp3 algo
-    #     # the possible choices for C is in J
-    #     # the following two lines are an ideal set of "explore_rates"
-    #     # min_rate, max_rate = 0, 2 * (int(math.sqrt(d * math.log(T**2+T) ) + math.sqrt(lamda)) + 1)
-    #     # J = np.arange(min_rate, max_rate, explore_interval_length)
-    #     Kexp = len(explore_rates)
-    #     logw = np.zeros(Kexp)
-    #     p = np.ones(Kexp) / Kexp
-    #     gamma = min(1, math.sqrt(Kexp * math.log(Kexp) / ((np.exp(1) - 1) * T)))
-    #     # random initial explore rate
-    #     index = np.random.choice(Kexp)
-    #     explore = explore_rates[index]
-    #
-    #     Klam = len(lamdas)
-    #     loglamw = np.zeros(Klam)
-    #     plam = np.ones(Klam) / Klam
-    #     gamma_lam = min(1, math.sqrt(Klam * math.log(Klam) / ((np.exp(1) - 1) * T)))
-    #     # random initial explore rate
-    #     index_lam = np.random.choice(Klam)
-    #     lamda = lamdas[index_lam]
-    #
-    #     xxt = np.zeros((d, d))
-    #     B_inv = np.identity(d) / lamda
-    #     for t in range(T):
-    #         feature = self.data.fv[t]
-    #         K = len(feature)
-    #         ucb_idx = [0] * K
-    #
-    #         for arm in range(K):
-    #             ucb_idx[arm] = feature[arm].dot(theta_hat) + explore * math.sqrt(
-    #                 feature[arm].T.dot(B_inv).dot(feature[arm]))
-    #         pull = np.argmax(ucb_idx)
-    #         observe_r = self.data.random_sample(t, pull)
-    #
-    #         # update explore rates by auto_tuning
-    #         logw, p, index = auto_tuning(logw, p, observe_r, index, gamma)
-    #         explore = explore_rates[index]
-    #         loglamw, plam, index_lam = auto_tuning(loglamw, plam, observe_r, index_lam, gamma_lam)
-    #         lamda = lamdas[index_lam]
-    #
-    #         # update linucb
-    #         xxt += np.outer(feature[pull], feature[pull])
-    #         B_inv = np.linalg.inv(xxt + lamda * np.identity(d))
-    #         xr += feature[pull] * observe_r
-    #         theta_hat = B_inv.dot(xr)
-    #         regret[t] = regret[t - 1] + self.data.optimal[t] - self.data.reward[t][pull]
-    #     return regret
-    #
-    # def linucb_auto_combined(self, explore_rates, lamdas):
-    #     T = self.T
-    #     d = self.data.d
-    #     regret = np.zeros(T)
-    #     xr = np.zeros(d)
-    #     theta_hat = np.zeros(d)
-    #
-    #     # initialization for exp3 algo
-    #     # the possible choices for C is in J
-    #     # the following two lines are an ideal set of "explore_rates"
-    #     # min_rate, max_rate = 0, 2 * (int(math.sqrt(d * math.log(T**2+T) ) + math.sqrt(lamda)) + 1)
-    #     # J = np.arange(min_rate, max_rate, explore_interval_length)
-    #     explore_lamda = np.array(np.meshgrid(explore_rates, lamdas)).T.reshape(-1, 2)
-    #     Kexp = len(explore_lamda)
-    #     logw = np.zeros(Kexp)
-    #     p = np.ones(Kexp) / Kexp
-    #     gamma = min(1, math.sqrt(Kexp * math.log(Kexp) / ((np.exp(1) - 1) * T)))
-    #     # random initial explore rate
-    #     index = np.random.choice(Kexp)
-    #     explore, lamda = explore_lamda[index]
-    #
-    #     xxt = np.zeros((d, d))
-    #     B_inv = np.identity(d) / lamda
-    #     for t in range(T):
-    #         feature = self.data.fv[t]
-    #         K = len(feature)
-    #         ucb_idx = [0] * K
-    #
-    #         for arm in range(K):
-    #             ucb_idx[arm] = feature[arm].dot(theta_hat) + explore * math.sqrt(
-    #                 feature[arm].T.dot(B_inv).dot(feature[arm]))
-    #         pull = np.argmax(ucb_idx)
-    #         observe_r = self.data.random_sample(t, pull)
-    #
-    #         # update explore rates by auto_tuning
-    #         logw, p, index = auto_tuning(logw, p, observe_r, index, gamma)
-    #         explore, lamda = explore_lamda[index]
-    #
-    #         # update linucb
-    #         xxt += np.outer(feature[pull], feature[pull])
-    #         B_inv = np.linalg.inv(xxt + lamda * np.identity(d))
-    #         xr += feature[pull] * observe_r
-    #         theta_hat = B_inv.dot(xr)
-    #         regret[t] = regret[t - 1] + self.data.optimal[t] - self.data.reward[t][pull]
-    #     return regret
+    def linucb_tl(self, explore_rates, lamda = 1):
+        T = self.T
+        d = self.data.d
+        regret = np.zeros(T)
+        xr = np.zeros(d)
+        theta_hat = np.zeros(d)
+
+        # initialization for exp3 algo
+        # the possible choices for C is in J
+        # the following two lines are an ideal set of "explore_rates"
+        # min_rate, max_rate = 0, 2 * (int(math.sqrt(d * math.log(T**2+T) ) + math.sqrt(lamda)) + 1)
+        # J = np.arange(min_rate, max_rate, explore_interval_length)
+        explore_lamda = explore_rates
+        Kexp = len(explore_lamda)
+        logw = np.zeros(Kexp)
+        p = np.ones(Kexp) / Kexp
+        gamma = min(1, math.sqrt(Kexp * math.log(Kexp) / ((np.exp(1) - 1) * T)))
+        # random initial explore rate
+        index = np.random.choice(Kexp)
+        explore = explore_lamda[index]
+
+        xxt = np.zeros((d, d))
+        B_inv = np.identity(d) / lamda
+        for t in range(T):
+            feature = self.data.fv[t]
+            K = len(feature)
+            ucb_idx = [0] * K
+
+            for arm in range(K):
+                ucb_idx[arm] = feature[arm].dot(theta_hat) + explore * math.sqrt(
+                    feature[arm].T.dot(B_inv).dot(feature[arm]))
+            pull = np.argmax(ucb_idx)
+            observe_r = self.data.random_sample(t, pull)
+
+            # update explore rates by auto_tuning
+            logw, p, index = tl_auto_tuning(logw, p, observe_r, index, gamma)
+            explore = explore_lamda[index]
+
+            # update linucb
+            xxt += np.outer(feature[pull], feature[pull])
+            B_inv = np.linalg.inv(xxt + lamda * np.identity(d))
+            xr += feature[pull] * observe_r
+            theta_hat = B_inv.dot(xr)
+            regret[t] = regret[t - 1] + self.data.optimal[t] - self.data.reward[t][pull]
+        return regret
