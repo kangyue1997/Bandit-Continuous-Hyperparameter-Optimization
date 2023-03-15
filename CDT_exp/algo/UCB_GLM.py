@@ -186,134 +186,58 @@ class UCB_GLM:
             explore = explore_rates[index]
         return regret
 
-    # def glmucb_auto_3layer(self, explore_rates, lamdas):
-    #     T = self.T
-    #     d = self.data.d
-    #     regret = np.zeros(T)
-    #     theta_hat = np.zeros(d)
-    #     y = np.array([])
-    #     y = y.astype('int')
-    #     X = np.empty([0, d])
-    #     theta = np.zeros(d)
-    #
-    #     xxt = np.zeros((d, d))
-    #     for t in range(2):
-    #         feature = self.data.fv[t]
-    #         K = len(feature)
-    #         pull = np.random.choice(K)
-    #         observe_r = self.data.random_sample(t, pull)
-    #         y = np.concatenate((y, [observe_r]), axis=0)
-    #         X = np.concatenate((X, [feature[pull]]), axis=0)
-    #         regret[t] = regret[t - 1] + self.data.optimal[t] - self.data.reward[t][pull]
-    #         xxt += np.outer(feature[pull], feature[pull])
-    #     if y[0] == y[1]:
-    #         y[1] = 1 - y[0]
-    #     # random pull in the first two rounds to make sure y[0] != y[1]
-    #
-    #     # initialization for exp3 algo
-    #     # the possible choices for C is in J
-    #     # the following two lines are an ideal set of "explore_rates"
-    #     # min_rate, max_rate = 0, 2 * (int(math.sqrt(d * math.log(T**2+T) ) + math.sqrt(lamda)) + 1)
-    #     # J = np.arange(min_rate, max_rate, explore_interval_length)
-    #     Kexp = len(explore_rates)
-    #     logw = np.zeros(Kexp)
-    #     p = np.ones(Kexp) / Kexp
-    #     gamma = min(1, math.sqrt(Kexp * math.log(Kexp) / ((np.exp(1) - 1) * T)))
-    #     # random initial explore rate
-    #     index = np.random.choice(Kexp)
-    #     explore = explore_rates[index]
-    #
-    #     # initialization for exp3 algo
-    #     Klam = len(lamdas)
-    #     loglamw = np.zeros(Klam)
-    #     plam = np.ones(Klam) / Klam
-    #     gamma_lam = min(1, math.sqrt(Klam * math.log(Klam) / ((np.exp(1) - 1) * T)))
-    #     # random initial explore rate
-    #     index_lam = np.random.choice(Klam)
-    #     lamda = lamdas[index_lam]
-    #
-    #     B_inv = np.linalg.inv(xxt + lamda * np.identity(d))
-    #     for t in range(2, T):
-    #         feature = self.data.fv[t]
-    #         K = len(feature)
-    #         ucb_idx = [0] * K
-    #         clf = LogisticRegression(penalty='l2', C=lamda, fit_intercept=False, solver='lbfgs').fit(X, y)
-    #         theta = clf.coef_[0]
-    #         for arm in range(K):
-    #             ucb_idx[arm] = feature[arm].dot(theta) + explore * math.sqrt(
-    #                 feature[arm].T.dot(B_inv).dot(feature[arm]))
-    #         pull = np.argmax(ucb_idx)
-    #         observe_r = self.data.random_sample(t, pull)
-    #
-    #         # update explore rates by auto_tuning
-    #         logw, p, index = auto_tuning(logw, p, observe_r, index, gamma)
-    #         explore = explore_rates[index]
-    #         loglamw, plam, index_lam = auto_tuning(loglamw, plam, observe_r, index_lam, gamma_lam)
-    #         lamda = lamdas[index_lam]
-    #
-    #         xxt += np.outer(feature[pull], feature[pull])
-    #         B_inv = np.linalg.inv(xxt + lamda * np.identity(d))
-    #
-    #         y = np.concatenate((y, [observe_r]), axis=0)
-    #         X = np.concatenate((X, [feature[pull]]), axis=0)
-    #         regret[t] = regret[t - 1] + self.data.optimal[t] - self.data.reward[t][pull]
-    #     return regret
-    #
-    # def glmucb_auto_combined(self, explore_rates, lamdas):
-    #     T = self.T
-    #     d = self.data.d
-    #     regret = np.zeros(T)
-    #     theta_hat = np.zeros(d)
-    #     y = np.array([])
-    #     y = y.astype('int')
-    #     X = np.empty([0, d])
-    #     theta = np.zeros(d)
-    #
-    #     xxt = np.zeros((d, d))
-    #     for t in range(2):
-    #         feature = self.data.fv[t]
-    #         K = len(feature)
-    #         pull = np.random.choice(K)
-    #         observe_r = self.data.random_sample(t, pull)
-    #         y = np.concatenate((y, [observe_r]), axis=0)
-    #         X = np.concatenate((X, [feature[pull]]), axis=0)
-    #         regret[t] = regret[t - 1] + self.data.optimal[t] - self.data.reward[t][pull]
-    #         xxt += np.outer(feature[pull], feature[pull])
-    #     if y[0] == y[1]:
-    #         y[1] = 1 - y[0]
-    #     # random pull in the first two rounds to make sure y[0] != y[1]
-    #
-    #     # initialization for exp3 algo
-    #     explore_lamda = np.array(np.meshgrid(explore_rates, lamdas)).T.reshape(-1, 2)
-    #     Kexp = len(explore_lamda)
-    #     logw = np.zeros(Kexp)
-    #     p = np.ones(Kexp) / Kexp
-    #     gamma = min(1, math.sqrt(Kexp * math.log(Kexp) / ((np.exp(1) - 1) * T)))
-    #     # random initial explore rate
-    #     index = np.random.choice(Kexp)
-    #     explore, lamda = explore_lamda[index]
-    #
-    #     B_inv = np.linalg.inv(xxt + lamda * np.identity(d))
-    #     for t in range(2, T):
-    #         feature = self.data.fv[t]
-    #         K = len(feature)
-    #         ucb_idx = [0] * K
-    #         clf = LogisticRegression(penalty='l2', C=lamda, fit_intercept=False, solver='lbfgs').fit(X, y)
-    #         theta = clf.coef_[0]
-    #         for arm in range(K):
-    #             ucb_idx[arm] = feature[arm].dot(theta) + explore * math.sqrt(
-    #                 feature[arm].T.dot(B_inv).dot(feature[arm]))
-    #         pull = np.argmax(ucb_idx)
-    #         observe_r = self.data.random_sample(t, pull)
-    #
-    #         # update explore rates by auto_tuning
-    #         logw, p, index = auto_tuning(logw, p, observe_r, index, gamma)
-    #         explore, lamda = explore_lamda[index]
-    #
-    #         xxt += np.outer(feature[pull], feature[pull])
-    #         B_inv = np.linalg.inv(xxt + lamda * np.identity(d))
-    #
-    #         y = np.concatenate((y, [observe_r]), axis=0)
-    #         X = np.concatenate((X, [feature[pull]]), axis=0)
-    #         regret[t] = regret[t - 1] + self.data.optimal[t] - self.data.reward[t][pull]
-    #     return regret
+    def ucbglm_tl(self, explore_rates, lamda=1, exp_time=30):
+        T = self.T
+        d = self.data.d
+        regret = np.zeros(T)
+        B = np.identity(d) * lamda
+        y = np.array([])
+        y = y.astype('int')
+        X = np.empty([0, d])
+        for t in range(exp_time):
+            feature = self.data.fv[t]
+            K = len(feature)
+            pull = np.random.choice(K)
+            observe_r = self.data.random_sample(t, pull)
+            y = np.concatenate((y, [observe_r]), axis=0)
+            X = np.concatenate((X, [feature[pull]]), axis=0)
+            regret[t] = regret[t - 1] + self.data.optimal[t] - self.data.reward[t][pull]
+            B += np.outer(feature[pull], feature[pull])
+        if y[0] == y[1]:
+            y[1] = 1 - y[0]
+        # random pull in the first two rounds to make sure y[0] != y[1]
+        B_inv = np.linalg.inv(B)
+
+        # initialization for EXP3 tuning
+        explore_lamda = explore_rates
+        Kexp = len(explore_lamda)
+        logw = np.zeros(Kexp)
+        p = np.ones(Kexp) / Kexp
+        gamma = min(1, math.sqrt(Kexp * math.log(Kexp) / ((np.exp(1) - 1) * T)))
+        # random initial explore rate
+        index = np.random.choice(Kexp)
+        explore = explore_lamda[index]
+
+        for t in range(exp_time, T):
+            feature = self.data.fv[t]
+            K = len(feature)
+            ucb_idx = [0] * K
+            clf = LogisticRegression(penalty='l2', C=lamda, fit_intercept=False, solver='lbfgs').fit(X, y)
+            theta = clf.coef_[0]
+            for arm in range(K):
+                ucb_idx[arm] = feature[arm].dot(theta) + explore * math.sqrt(
+                    feature[arm].T.dot(B_inv).dot(feature[arm]))
+            pull = np.argmax(ucb_idx)
+            observe_r = self.data.random_sample(t, pull)
+            tmp = B_inv.dot(feature[pull])
+            B += np.outer(feature[pull], feature[pull])
+            B_inv -= np.outer(tmp, tmp) / (1 + feature[pull].dot(tmp))
+            y = np.concatenate((y, [observe_r]), axis=0)
+            X = np.concatenate((X, [feature[pull]]), axis=0)
+            regret[t] = regret[t - 1] + self.data.optimal[t] - self.data.reward[t][pull]
+
+            # update explore rates by EXP3 tuning
+            logw, p, index = tl_auto_tuning(logw, p, observe_r, index, gamma)
+            explore = explore_lamda[index]
+        return regret
+
