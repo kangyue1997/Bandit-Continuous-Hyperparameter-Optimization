@@ -160,5 +160,44 @@ class Laplace_TS:
             s, f, index = op_tuning(s, f, observe_r, index)
             explore = explore_rates[index]
         return regret
+    
+    def laplacets_tl(self, explore_rates, lamda=1, max_ite=1000):
+        T = self.T
+        d = self.data.d
+        regret = np.zeros(self.T)
+        m = np.zeros(d)
+        q = np.ones(d) * lamda
 
+        explore_lamda = explore_rates
+        Kexp = len(explore_lamda)
+        logw = np.zeros(Kexp)
+        p = np.ones(Kexp) / Kexp
+        gamma = min(1, math.sqrt(Kexp * math.log(Kexp) / ((np.exp(1) - 1) * T)))
+        # random initial explore rate
+        index = np.random.choice(Kexp)
+        explore = explore_lamda[index]
+
+        for t in range(T):
+            feature = self.data.fv[t]
+            K = len(feature)
+            ts_idx = [0] * K
+            if np.isnan(m).any() or np.isnan(q).any() or np.isinf(m).any() or np.isinf(q).any():
+                # print('inf or nan encountered in posterior, will change to another step size to continue grid search')
+                regret[-1] = float('Inf')
+                break
+            theta = np.random.multivariate_normal(m, np.diag(1 / q))
+            for arm in range(K):
+                ts_idx[arm] = feature[arm].dot(theta)
+            pull = np.argmax(ts_idx)
+            observe_r = self.data.random_sample(t, pull)
+            regret[t] = regret[t - 1] + self.data.optimal[t] - self.data.reward[t][pull]
+            y = np.array([2 * observe_r - 1])
+            X = np.array([feature[pull]])
+            w = self.optimize(theta, m, q, X, y, explore, max_ite)
+            m[:] = w[:]
+            p = self.data.logistic(feature[pull].dot(w))
+            q += p * (1 - p) * feature[pull] ** 2
+            logw, p, index = tl_auto_tuning(logw, p, observe_r, index, gamma)
+            explore = explore_lamda[index]
+        return regret
 
