@@ -99,7 +99,7 @@ def zooming(sigma, T, simulator, points = [], inte = [0,1]):
     return regret, cum_regret
 
 
-con = 0.5
+
 
 def zooming_tsr(sigma, T, simulator, H, inte = [0,1], prior = False):
     if not prior:
@@ -122,7 +122,7 @@ def zooming_tsr(sigma, T, simulator, H, inte = [0,1], prior = False):
             cen = [(inte[1]-inte[0])*np.random.random_sample(1)+inte[0]]
             time = [1]
             rad = [math.sqrt(c * math.log(T))]
-            sd = [math.sqrt(con*math.pi * sigma ** 2 * math.log(T))]
+            sd = [math.sqrt(math.pi/2 * sigma ** 2 * math.log(T))]
             result = simulator.value(t, cen[0])
             mu = [result[1]]
         else:
@@ -148,7 +148,7 @@ def zooming_tsr(sigma, T, simulator, H, inte = [0,1], prior = False):
                 cen = np.concatenate((cen, [res[1]]), axis=0)
                 time = np.concatenate((time, [1]), axis=0)
                 rad = np.concatenate((rad, [math.sqrt(c * math.log(T))]), axis=0)
-                sd = np.concatenate((sd, [math.sqrt( con*math.pi * sigma ** 2 * math.log(T))]), axis=0)
+                sd = np.concatenate((sd, [math.sqrt(math.pi/2 * sigma ** 2 * math.log(T))]), axis=0)
                 result = simulator.value(t, cen[-1])
                 mu = np.concatenate((mu, [result[1]]), axis=0)
         regret.append(result[0])
