@@ -45,7 +45,7 @@ class LinTS:
             regret[t] = regret[t - 1] + self.data.optimal[t] - self.data.reward[t][pull]
         return regret
 
-    def lints_auto(self, exp_time, H=H, inte = [0,1], lamda=1):
+    def lints_auto(self, exp_time, H, inte = [0,1], lamda=1):
         T = self.T
         d = self.data.d
         regret = np.zeros(T)
