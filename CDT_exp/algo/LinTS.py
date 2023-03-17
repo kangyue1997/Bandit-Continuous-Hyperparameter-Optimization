@@ -45,7 +45,7 @@ class LinTS:
             regret[t] = regret[t - 1] + self.data.optimal[t] - self.data.reward[t][pull]
         return regret
 
-    def lints_auto(self, exp_time, inte = [0,1], lamda=1):
+    def lints_auto(self, exp_time, H=H, inte = [0,1], lamda=1):
         T = self.T
         d = self.data.d
         regret = np.zeros(T)
@@ -101,8 +101,15 @@ class LinTS:
         for t in range((exp_time+1),T):
             feature = self.data.fv[t]
             K = len(feature)
-            ind, cen, time, mu, rad, sd = auto_tuning(cen, time, rad, sd, c, T, mu, inte)
-            explore = trans(2,cen[ind],3)
+            if (t-exp_time) % H == 0:
+                cen = (up - low) * np.random.random_sample(1) + low
+                time = [1]
+                rad = [math.sqrt(c * math.log(T))]
+                sd = [math.sqrt(2 * c)]
+                explore = trans(2, cen[0], 3) 
+            else:
+                ind, cen, time, mu, rad, sd = auto_tuning(cen, time, rad, sd, c, T, mu, inte)
+                explore = trans(2,cen[ind],3)
             theta_ts = np.random.multivariate_normal(theta_hat, explore ** 2 * B_inv)
             ucb_idx = [0] * K
             for arm in range(K):
@@ -118,7 +125,10 @@ class LinTS:
             regret[t] = regret[t - 1] + self.data.optimal[t] - self.data.reward[t][pull]
 
             # update explore rates by auto_tuning
-            mu[ind] = (mu[ind]*(time[ind]-1) + observe_r)/time[ind]
+            if (t - exp_time) % H == 0:
+                mu = [observe_r]
+            else:
+                mu[ind] = (mu[ind]*(time[ind]-1) + observe_r)/time[ind]
         return regret
 
     def lints_op(self, explore_rates, lamda=1):
