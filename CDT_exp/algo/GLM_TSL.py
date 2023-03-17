@@ -87,7 +87,7 @@ class GLM_TSL:
         sd = [math.sqrt(2 * c)]
         feature = self.data.fv[tau]
         K = len(feature)
-        explore = trans(4,cen[ind],1)
+        explore = trans(4,cen[0],1)
 
         ucb_idx = [0] * K
         clf = LogisticRegression(penalty='none', fit_intercept=False, solver='lbfgs').fit(X, y)
