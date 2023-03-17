@@ -44,7 +44,7 @@ class LinUCB:
             regret[t] = regret[t - 1] + self.data.optimal[t] - self.data.reward[t][pull]
         return regret
 
-    def linucb_auto(self, exp_time, inte = [0,1], lamda=1):
+    def linucb_auto(self, exp_time, H, inte = [0,1], lamda=1):
         T = self.T
         d = self.data.d
         regret = np.zeros(T)
@@ -102,8 +102,15 @@ class LinUCB:
             feature = self.data.fv[t]
             K = len(feature)
             ucb_idx = [0] * K
-            ind, cen, time, mu, rad, sd = auto_tuning(cen, time, rad, sd, c, T, mu, inte)
-            explore = trans(1,cen[ind],2)+0.2
+            if (t-exp_time) % H == 0:
+                cen = (up - low) * np.random.random_sample(1) + low
+                time = [1]
+                rad = [math.sqrt(c * math.log(T))]
+                sd = [math.sqrt(2 * c)]
+                explore = trans(2, cen[0])
+            else: 
+                ind, cen, time, mu, rad, sd = auto_tuning(cen, time, rad, sd, c, T, mu, inte)
+                explore = trans(1,cen[ind],2)+0.2
 
             for arm in range(K):
                 ucb_idx[arm] = feature[arm].dot(theta_hat) + explore * math.sqrt(
@@ -118,7 +125,10 @@ class LinUCB:
             theta_hat = B_inv.dot(xr)
             regret[t] = regret[t - 1] + self.data.optimal[t] - self.data.reward[t][pull]
 
-            mu[ind] = (mu[ind]*(time[ind]-1) + observe_r)/time[ind]
+            if (t - exp_time) % H == 0:
+                mu = [observe_r]
+            else:
+                mu[ind] = (mu[ind]*(time[ind]-1) + observe_r)/time[ind]
             # update explore rates by auto_tuning
         return regret
 
