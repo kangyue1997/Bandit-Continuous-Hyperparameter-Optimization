@@ -138,13 +138,13 @@ class SGD_TS:
                     ind, cen, time, mu, rad, sd = auto_tuning(cen, time, rad, sd, c, T, mu, inte)
                     explore = cen[ind]
                 j = t // tau
-                eta0 = trans(4,explore[1],1)
+                eta0 = trans(5,explore[1],1)
                 # theoretical value same as UCB-GLM
                 # g1 = self.data.sigma * math.sqrt(d / 2 * math.log(1 + 2 * j * tau / d) + 2 * math.log(T))
                 # # theoretical value defined in sgdts paper
                 # g2 = tau / eta0 * math.sqrt(1 + math.log(j))
 
-                cov = (2 * trans(4,explore[0],1)**2) * np.identity(d) / j
+                cov = (2 * trans(5,explore[0],1)) * np.identity(d) / j
                 eta = eta0 / j
                 theta_tilde -= eta * grad
                 distance = np.linalg.norm(theta_tilde - theta_hat)
