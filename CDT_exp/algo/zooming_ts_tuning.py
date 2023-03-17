@@ -51,7 +51,9 @@ def auto_tuning(cen,time,rad,sd,c,T,mu,inte):
     else:
         res = check_1d(cen, rad, inte)
     if res[0]:
-        tilde_mu = np.random.multivariate_normal(mu, 0.1*np.diag(sd))
+        aa = np.random.normal(size=len(mu))
+        aa = np.maximum(aa, 1/math.sqrt(2*math.pi))
+        tilde_mu = [mu[i] + sd[i] for i in range(len(mu))]
         ind = np.argmax(tilde_mu)
         time[ind] += 1
         rad[ind] *= math.sqrt((time[ind]-1)/time[ind])
