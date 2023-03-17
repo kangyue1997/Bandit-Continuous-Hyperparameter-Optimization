@@ -25,8 +25,8 @@ parser.add_argument('-sigma', '--sigma', type=float, default=math.sqrt(0.1), hel
 parser.add_argument('-funtype', '--funtype', type=str, default='triangle',
                     help='lipschitz function type: triangle or sine')
 parser.add_argument('-peak', '--peak', type=float, default=0.5, help='peak')
-parser.add_argument('-prob', '--prob', type=float, default=1/300, help='probability of moving')
-parser.add_argument('-step', '--step', type=float, default=0.05, help='stepsize of moving')
+parser.add_argument('-prob', '--prob', type=float, default=0.05, help='probability of moving')
+parser.add_argument('-step', '--step', type=float, default=0.01, help='stepsize of moving')
 parser.add_argument('-save', '--save', type=str, default='False', help='save the data or not')
 parser.add_argument('-para', '--para', type=str, default='False', help='parallel computing')
 parser.add_argument('-inte', '--inte', nargs='+', default=[0, 1], help='exploration intervals')
