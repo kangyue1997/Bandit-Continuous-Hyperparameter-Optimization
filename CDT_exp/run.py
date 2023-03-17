@@ -36,6 +36,7 @@ parser.add_argument('-sigma', '--sigma', type=float, default = 0.5, help = 'sub 
 parser.add_argument('-er', '--er', nargs = '+', default = [0.5,1,3,5,7], help = 'exploration rates')
 parser.add_argument('-save', '--save', type=str, default = 'False', help = 'save the data or not')
 parser.add_argument('-eff', '--eff', type=str, default = 'True', help = '..')
+parser.add_argument('-H', '--H', type=int, default=0, help='Restart time')
 # parser.add_argument('-inte', '--inte', nargs = '+', default = [0,1], help = 'exploration intervals')
 args = parser.parse_args()
 
@@ -83,6 +84,9 @@ if save != 'False':
     save = True
 else:
     save = False
+H = args.H
+if H <= 0:
+    H = t
 
 methods = {
     'theory': '_theoretical_explore',
@@ -141,22 +145,22 @@ def func(n0):
     if algo == 'linucb' or algo == 'lints':
         reg_theory += fcts['theory'](lamda = lamda, delta = delta)
         reg_op += fcts['op'](explore_rates = exp_rate, lamda = lamda)
-        reg_auto += fcts['auto'](exp_time = 30, inte = inte, lamda=lamda)
+        reg_auto += fcts['auto'](exp_time = 30, H=H, inte = inte, lamda=lamda)
         reg_tl += fcts['tl'](explore_rates=exp_rate, lamda=lamda)
     elif algo == 'ucbglm':
         reg_theory += fcts['theory'](lamda = lamda, delta = delta)
         reg_op += fcts['op'](explore_rates = exp_rate, lamda = lamda)
-        reg_auto += fcts['auto'](exp_time = 90, inte = inte, lamda=lamda)
+        reg_auto += fcts['auto'](exp_time = 90, H=H, inte = inte, lamda=lamda)
         reg_tl += fcts['tl'](explore_rates=exp_rate, lamda=lamda)
     elif algo == 'laplacets':
         reg_theory += fcts['theory'](lamda=lamda)
         reg_op += fcts['op'](explore_rates=exp_rate)
-        reg_auto += fcts['auto'](exp_time=80, inte=inte)
+        reg_auto += fcts['auto'](exp_time=80, H=H, inte=inte)
         reg_tl += fcts['tl'](explore_rates=exp_rate)
     elif algo == 'glmtsl':
         reg_theory += fcts['theory'](tau = 150,lamda=lamda)
         reg_op += fcts['op'](explore_rates=exp_rate,tau = 150,lamda=lamda)
-        reg_auto += fcts['auto'](tau = 150, inte=inte, lamda = lamda)
+        reg_auto += fcts['auto'](tau = 150, H=H, inte=inte, lamda = lamda)
         reg_tl += fcts['tl'](explore_rates=exp_rate, tau=150, lamda=lamda)
     elif algo == 'gloc':
         reg_theory += fcts['theory']()
