@@ -58,7 +58,7 @@ class GLM_TSL:
             regret[t] = regret[t - 1] + self.data.optimal[t] - self.data.reward[t][pull]
         return regret
 
-    def glmtsl_auto(self, inte = [0,1], tau = 150, lamda = 1):
+    def glmtsl_auto(self, H, inte = [0,1], tau = 150, lamda = 1):
         T = self.T
         d = self.data.d
         regret = np.zeros(T)
@@ -112,8 +112,15 @@ class GLM_TSL:
         for t in range((tau+1), T):
             feature = self.data.fv[t]
             K = len(feature)
-            ind, cen, time, mu, rad, sd = auto_tuning(cen, time, rad, sd, c, T, mu, inte)
-            explore =  trans(1,cen[ind],1) + 0.3
+            if (t-tau) % H == 0:
+                cen = (up - low) * np.random.random_sample(1) + low
+                time = [1]
+                rad = [math.sqrt(c * math.log(T))]
+                sd = [math.sqrt(2 * c)]
+                explore = trans(2, cen[0])
+            else:
+                ind, cen, time, mu, rad, sd = auto_tuning(cen, time, rad, sd, c, T, mu, inte)
+                explore =  trans(1,cen[ind],1) + 0.3
             ucb_idx = [0] * K
             clf = LogisticRegression(penalty='none', fit_intercept=False, solver='lbfgs').fit(X, y)
             theta_bar = clf.coef_[0]
@@ -134,7 +141,10 @@ class GLM_TSL:
             y = np.concatenate((y, [observe_r]), axis=0)
             X = np.concatenate((X, [feature[pull]]), axis=0)
             regret[t] = regret[t - 1] + self.data.optimal[t] - self.data.reward[t][pull]
-            mu[ind] = (mu[ind] * (time[ind] - 1) + observe_r) / time[ind]
+            if (t - tau) % H == 0:
+                mu = [observe_r]
+            else:
+                mu[ind] = (mu[ind]*(time[ind]-1) + observe_r)/time[ind]
         return regret
 
     def glmtsl_op(self, explore_rates, tau = 150, lamda = 1):
