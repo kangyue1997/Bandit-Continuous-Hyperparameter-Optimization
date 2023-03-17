@@ -50,8 +50,8 @@ class GLOC:
         sd = [math.sqrt(2 * c)]
         explore = cen[0]
 
-        beta = trans(4,cen[ind],1)
-        k = trans(4,cen[ind],1)
+        beta = trans(4,cen[0],1)
+        k = trans(4,cen[0],1)
 
         feature = self.data.fv[0]
         K = len(feature)
@@ -85,8 +85,8 @@ class GLOC:
                 rad = [math.sqrt(c * math.log(T))]
                 sd = [math.sqrt(2 * c)]
                 explore = cen[0]
-                beta = trans(4,cen[ind],1)
-                k = trans(4,cen[ind],1)
+                beta = trans(4,cen[0],1)
+                k = trans(4,cen[0],1)
             else:
                 ind, cen, time, mu, rad, sd = auto_tuning(cen, time, rad, sd, c, T, mu, inte)
                 explore = cen[ind]
