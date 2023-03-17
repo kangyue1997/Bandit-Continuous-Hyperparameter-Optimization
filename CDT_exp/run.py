@@ -165,7 +165,7 @@ def func(n0):
     elif algo == 'gloc':
         reg_theory += fcts['theory']()
         reg_op += fcts['op'](explore_rates=exp_rate)
-        reg_auto += fcts['auto'](inte=inte)
+        reg_auto += fcts['auto'](H=H, inte=inte)
         reg_tl += fcts['tl'](explore_rates=exp_rate, k = exp_rate)
     else:
         reg_theory += fcts['theory'](C = c, eta0 = eta0)
