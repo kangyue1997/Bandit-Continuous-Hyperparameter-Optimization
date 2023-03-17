@@ -78,7 +78,7 @@ class LinTS:
         sd = [math.sqrt(2 * c)]
         feature = self.data.fv[exp_time]
         K = len(feature)
-        explore = trans(2,cen[0],1)
+        explore = trans(5,cen[0],1)
 
         feature = self.data.fv[exp_time]
 
@@ -106,10 +106,10 @@ class LinTS:
                 time = [1]
                 rad = [math.sqrt(c * math.log(T))]
                 sd = [math.sqrt(2 * c)]
-                explore = trans(2,cen[0],1)
+                explore = trans(5,cen[0],1)
             else:
                 ind, cen, time, mu, rad, sd = auto_tuning(cen, time, rad, sd, c, T, mu, inte)
-                explore = trans(2,cen[ind],1)
+                explore = trans(5,cen[ind],1)
             theta_ts = np.random.multivariate_normal(theta_hat, explore ** 2 * B_inv)
             ucb_idx = [0] * K
             for arm in range(K):
