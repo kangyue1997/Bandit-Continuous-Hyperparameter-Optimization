@@ -56,7 +56,7 @@ class Laplace_TS:
             q += p * (1 - p) * feature[pull] ** 2
         return regret
 
-    def laplacets_auto(self, exp_time = 0, inte = [0,1], lamda = 1, max_ite = 1000):
+    def laplacets_auto(self, exp_time, H, inte = [0,1], lamda = 1, max_ite = 1000):
         T = self.T
         d = self.data.d
         regret = np.zeros(self.T)
@@ -103,8 +103,15 @@ class Laplace_TS:
             feature = self.data.fv[t]
             K = len(feature)
             ts_idx = [0] * K
-            ind, cen, time, mu, rad, sd = auto_tuning(cen, time, rad, sd, c, T, mu, inte)
-            explore = trans(2,cen[ind],1)*0.2 + 0.9
+            if (t-exp_time) % H == 0:
+                cen = (up - low) * np.random.random_sample(1) + low
+                time = [1]
+                rad = [math.sqrt(c * math.log(T))]
+                sd = [math.sqrt(2 * c)]
+                explore = trans(2, cen[0])
+            else:
+                ind, cen, time, mu, rad, sd = auto_tuning(cen, time, rad, sd, c, T, mu, inte)
+                explore = trans(2,cen[ind],1)
             if np.isnan(m).any() or np.isnan(q).any() or np.isinf(m).any() or np.isinf(q).any():
                 # print('inf or nan encountered in posterior, will change to another step size to continue grid search')
                 regret[-1] = float('Inf')
@@ -121,7 +128,10 @@ class Laplace_TS:
             m[:] = w[:]
             p = self.data.logistic(feature[pull].dot(w))
             q += p * (1 - p) * feature[pull] ** 2
-            mu[ind] = (mu[ind] * (time[ind] - 1) + observe_r) / time[ind]
+            if (t - exp_time) % H == 0:
+                mu = [observe_r]
+            else:
+                mu[ind] = (mu[ind]*(time[ind]-1) + observe_r)/time[ind]
         return regret
 
     def laplacets_op(self, explore_rates, lamda=1, max_ite=1000):
