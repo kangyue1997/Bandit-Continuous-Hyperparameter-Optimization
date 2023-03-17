@@ -30,7 +30,7 @@ class GLOC:
     def gloc_theoretical_explore(self):
         return np.array([-1]*self.T)
 
-    def gloc_auto(self, inte = [[0,1],[0,1]], eta = 1, S = 1, lamda = 1, eps = 1):
+    def gloc_auto(self, H, inte = [[0,1],[0,1]], eta = 1, S = 1, lamda = 1, eps = 1):
         T = self.T
         d = self.data.d
         regret = np.zeros(self.T)
@@ -77,10 +77,21 @@ class GLOC:
         for t in range(1,T):
             feature = self.data.fv[t]
             K = len(feature)
-            ind, cen, time, mu, rad, sd = auto_tuning(cen, time, rad, sd, c, T, mu, inte)
-            explore = cen[ind]
-            beta = trans(2, explore[0], 3)
-            k = trans(1, explore[1], 1)
+            if t % H == 0::
+                low = np.array([0.7 * a[0] + 0.3 * a[1] for a in inte])
+                up = np.array([0.3 * a[0] + 0.7 * a[1] for a in inte])
+                cen = [(up - low) * np.random.random_sample(2) + low]
+                time = [1]
+                rad = [math.sqrt(c * math.log(T))]
+                sd = [math.sqrt(2 * c)]
+                explore = cen[0]
+                beta = trans(2, explore[0], 3)
+                k = trans(1, explore[1], 1)
+            else:
+                ind, cen, time, mu, rad, sd = auto_tuning(cen, time, rad, sd, c, T, mu, inte)
+                explore = cen[ind]
+                beta = trans(2, explore[0], 3)
+                k = trans(1, explore[1], 1)
             ucb_idx = [0]*K
             for arm in range(K):
                 ucb_idx[arm] = feature[arm].dot(theta_hat) + beta * math.sqrt(feature[arm].dot(V_inv).dot(feature[arm]))
@@ -97,7 +108,10 @@ class GLOC:
             theta = self.argm(theta_prime, A, S, eta)
             xz += feature[pull].dot(theta) * feature[pull]
             theta_hat = V_inv.dot(xz)
-            mu[ind] = (mu[ind] * (time[ind] - 1) + observe_r) / time[ind]
+            if t % H == 0:
+                mu = [observe_r]
+            else:
+                mu[ind] = (mu[ind]*(time[ind]-1) + observe_r)/time[ind]
         return regret
 
     def gloc_op(self, explore_rates, k = 0.1, eta = 1, S = 1, lamda = 1, eps = 1):
