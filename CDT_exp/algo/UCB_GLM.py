@@ -90,7 +90,7 @@ class UCB_GLM:
         time = [1]
         rad = [math.sqrt(c * math.log(T))]
         sd = [math.sqrt(2 * c)]
-        explore = trans(1,cen[0],2)+0.2
+        explore = trans(4,cen[0],1)
 
         feature = self.data.fv[exp_time]
         K = len(feature)
@@ -120,10 +120,10 @@ class UCB_GLM:
                 time = [1]
                 rad = [math.sqrt(c * math.log(T))]
                 sd = [math.sqrt(2 * c)]
-                explore = trans(1,cen[ind],2)+0.2
+                explore = trans(4,cen[0],1)
             else:
                 ind, cen, time, mu, rad, sd = auto_tuning(cen, time, rad, sd, c, T, mu, inte)
-                explore = trans(1,cen[ind],2)+0.2
+                explore = trans(4,cen[ind],1)
             clf = LogisticRegression(penalty='l2', C=lamda, fit_intercept=False, solver='lbfgs').fit(X, y)
             theta = clf.coef_[0]
             for arm in range(K):
