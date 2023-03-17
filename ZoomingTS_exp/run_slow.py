@@ -1,4 +1,4 @@
-from alg1_codes_slow import *
+from alg1_codes_slowtv import *
 
 import os
 import pandas as pd
