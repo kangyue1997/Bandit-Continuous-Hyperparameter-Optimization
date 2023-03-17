@@ -79,7 +79,7 @@ class Laplace_TS:
         sd = [math.sqrt(2 * c)]
         feature = self.data.fv[exp_time]
         K = len(feature)
-        explore = trans(2,cen[0],1)*0.2 + 0.9
+        explore = trans(4,cen[ind],1)
 
         ts_idx = [0] * K
 
@@ -108,10 +108,10 @@ class Laplace_TS:
                 time = [1]
                 rad = [math.sqrt(c * math.log(T))]
                 sd = [math.sqrt(2 * c)]
-                explore = trans(2, cen[0])
+                explore = trans(4,cen[ind],1)
             else:
                 ind, cen, time, mu, rad, sd = auto_tuning(cen, time, rad, sd, c, T, mu, inte)
-                explore = trans(2,cen[ind],1)
+                explore = trans(4,cen[ind],1)
             if np.isnan(m).any() or np.isnan(q).any() or np.isinf(m).any() or np.isinf(q).any():
                 # print('inf or nan encountered in posterior, will change to another step size to continue grid search')
                 regret[-1] = float('Inf')
