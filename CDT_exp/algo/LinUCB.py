@@ -79,7 +79,7 @@ class LinUCB:
         sd = [math.sqrt(2*c)]
         feature = self.data.fv[exp_time]
         K = len(feature)
-        explore = trans(4,cen[0],1)
+        explore = trans(2,cen[0],1)
         ucb_idx = [0] * K
 
         for arm in range(K):
@@ -107,10 +107,10 @@ class LinUCB:
                 time = [1]
                 rad = [math.sqrt(c * math.log(T))]
                 sd = [math.sqrt(2 * c)]
-                explore = trans(4,cen[0],1)
+                explore = trans(2,cen[0],1)
             else: 
                 ind, cen, time, mu, rad, sd = auto_tuning(cen, time, rad, sd, c, T, mu, inte)
-                explore = trans(4,cen[ind],1)
+                explore = trans(2,cen[ind],1)
 
             for arm in range(K):
                 ucb_idx[arm] = feature[arm].dot(theta_hat) + explore * math.sqrt(
