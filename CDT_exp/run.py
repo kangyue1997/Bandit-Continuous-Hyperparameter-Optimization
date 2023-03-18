@@ -35,31 +35,28 @@ parser.add_argument('-delta', '--delta', type=float, default = 0.05, help = 'err
 parser.add_argument('-sigma', '--sigma', type=float, default = 0.5, help = 'sub gaussian parameter')
 parser.add_argument('-er', '--er', nargs = '+', default = [0.5,1,3,5,7], help = 'exploration rates')
 parser.add_argument('-save', '--save', type=str, default = 'False', help = 'save the data or not')
-parser.add_argument('-eff', '--eff', type=str, default = 'True', help = '..')
 parser.add_argument('-H', '--H', type=int, default=0, help='Restart time')
+parser.add_argument('-para', '--para', type=str, default='False', help='Parallel computing')
 # parser.add_argument('-inte', '--inte', nargs = '+', default = [0,1], help = 'exploration intervals')
 args = parser.parse_args()
 
-eff = True
-if args.eff == 'False':
-    eff = False
+
+
+parallel = True if args.para == 'True' else False
 rep = args.rep
-if eff:
-    pick = rep
-    rep = int(rep*1.6)
-algo = args.algo  #{'linucb', 'ucbglm', 'lints', 'laplacets', 'sgdts','glmtsl','gloc'}
+algo = args.algo  # {'linucb', 'ucbglm', 'lints', 'laplacets', 'sgdts','glmtsl','gloc'}
 if algo == 'linucb' or algo == 'lints':
     model = 'linear'
 else:
     model = 'logistic'
-inte = [0,1]
+inte = [0, 1]
 if algo == 'sgdts' or algo == 'gloc':
     inte = [[0, 1]] + [[0, 1]]
-#model = args.model
+# model = args.model
 gentype = args.gentype
 if gentype == 'movie':
-    fv = np.loadtxt("data/movie.csv", skiprows=1, delimiter=',')[:,1:]
-    user = np.loadtxt("data/user.csv", skiprows=1, delimiter=',')[:,1:]
+    fv = np.loadtxt("data/movie.csv", skiprows=1, delimiter=',')[:, 1:]
+    user = np.loadtxt("data/user.csv", skiprows=1, delimiter=',')[:, 1:]
 k = args.k
 t = args.t
 thetan = args.thetan
@@ -74,8 +71,8 @@ sigma = args.sigma
 contextual = True
 if args.context == 'False':
     contextual = False
-ub = 1/math.sqrt(d)
-lb = -1/math.sqrt(d)
+ub = 1 / math.sqrt(d)
+lb = -1 / math.sqrt(d)
 exp_rate = args.er
 exp_rate = [float(j) for j in exp_rate]
 eta0 = 0.2
@@ -102,135 +99,216 @@ methods = {
 # if not os.path.exists('results/' + gentype + '/' + model + '/'):
 #     os.mkdir('results/' + gentype + '/' + algo + '/')
 # path = 'results/' + gentype + '/' + algo + '/'
-seed = int(np.random.random_sample(1)[0]*1000000)
-def func(n0):
-    np.random.seed(n0 * seed)
-    if gentype == 'movie':
-        ind = np.random.choice(len(user), 40, replace=False)
-        theta = np.apply_along_axis(np.mean, 0, user[ind,:])
-        theta /= np.linalg.norm(theta)
-    else:
-        theta = np.random.uniform(lb, ub, (d))
-    if gentype != 'movie':
-        data = context(k,t,d,sigma,theta,theta_norm = thetan, gen_type= gentype, model=model, contextual=True)
-    else:
-        data = movie(k, t, d, sigma, true_theta=theta, theta_norm = thetan, model=model, fv=fv)
-    data.build_bandit()
-    if model not in {'linear','logistic'}:
-        raise ValueError('Not a valid model')
+seed = int(np.random.random_sample(1)[0] * 1000000)
 
+
+if parallel:
+    def func(n0):
+        np.random.seed(n0 * seed)
+        if gentype == 'movie':
+            ind = np.random.choice(len(user), 300, replace=False)
+            theta = np.apply_along_axis(np.mean, 0, user[ind, :])
+            theta /= np.linalg.norm(theta)
+        else:
+            theta = np.random.uniform(lb, ub, (d))
+        if gentype != 'movie':
+            data = context(k, t, d, sigma, theta, theta_norm=thetan, gen_type=gentype, model=model, contextual=True)
+        else:
+            data = movie(k, t, d, sigma, true_theta=theta, theta_norm=thetan, model=model, fv=fv)
+        data.build_bandit()
+        if model not in {'linear', 'logistic'}:
+            raise ValueError('Not a valid model')
+
+        reg_theory = np.zeros(t)
+        reg_auto = np.zeros(t)
+        reg_op = np.zeros(t)
+        reg_tl = np.zeros(t)
+
+        if algo == 'linucb':
+            algo_class = LinUCB(data)
+        elif algo == 'lints':
+            algo_class = LinTS(data)
+        elif algo == 'ucbglm':
+            algo_class = UCB_GLM(data)
+        elif algo == 'laplacets':
+            algo_class = Laplace_TS(data)
+        elif algo == 'sgdts':
+            algo_class = SGD_TS(data)
+        elif algo == 'glmtsl':
+            algo_class = GLM_TSL(data)
+        elif algo == 'gloc':
+            algo_class = GLOC(data)
+        fcts = {
+            k: getattr(algo_class, algo + methods[k])
+            for k, v in methods.items()
+        }
+        if algo == 'linucb' or algo == 'lints':
+            reg_theory += fcts['theory'](lamda=lamda, delta=delta)
+            reg_op += fcts['op'](explore_rates=exp_rate, lamda=lamda)
+            reg_auto += fcts['auto'](exp_time=30, H=H, inte=inte, lamda=lamda)
+            reg_tl += fcts['tl'](explore_rates=exp_rate, lamda=lamda)
+        elif algo == 'ucbglm':
+            reg_theory += fcts['theory'](lamda=lamda, delta=delta)
+            reg_op += fcts['op'](explore_rates=exp_rate, lamda=lamda)
+            reg_auto += fcts['auto'](exp_time=90, H=H, inte=inte, lamda=lamda)
+            reg_tl += fcts['tl'](explore_rates=exp_rate, lamda=lamda)
+        elif algo == 'laplacets':
+            reg_theory += fcts['theory'](lamda=lamda)
+            reg_op += fcts['op'](explore_rates=exp_rate)
+            reg_auto += fcts['auto'](exp_time=80, H=H, inte=inte)
+            reg_tl += fcts['tl'](explore_rates=exp_rate)
+        elif algo == 'glmtsl':
+            reg_theory += fcts['theory'](tau=150, lamda=lamda)
+            reg_op += fcts['op'](explore_rates=exp_rate, tau=150, lamda=lamda)
+            reg_auto += fcts['auto'](tau=150, H=H, inte=inte, lamda=lamda)
+            reg_tl += fcts['tl'](explore_rates=exp_rate, tau=150, lamda=lamda)
+        elif algo == 'gloc':
+            reg_theory += fcts['theory']()
+            reg_op += fcts['op'](explore_rates=exp_rate)
+            reg_auto += fcts['auto'](H=H, inte=inte)
+            reg_tl += fcts['tl'](explore_rates=exp_rate, k=exp_rate)
+        else:
+            reg_theory += fcts['theory'](C=c, eta0=eta0)
+            reg_op += fcts['op'](C=c, explore_rates=exp_rate)
+            reg_auto += fcts['auto'](C=c, inte=inte)
+            reg_tl += fcts['tl'](explore_rates={'eta': exp_rate, 'alpha': exp_rate}, C=c)
+        print("theory {0}, auto {1}, op {2}, tl {3}".format(reg_theory[-1], reg_auto[-1], reg_op[-1], reg_tl[-1]))
+        return reg_theory, reg_auto, reg_op, reg_tl
+
+
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        secs = [nn for nn in range(rep)]
+        results = executor.map(func, secs)
+        results = list(results)
+    res1 = [i[0] for i in list(results)]
+    res2 = [i[1] for i in list(results)]
+    res3 = [i[2] for i in list(results)]
+    res4 = [i[2] for i in list(results)]
+
+    print(algo)
+    print('mean')
+    print('{0}: reg_theory: {1}'.format(algo, (sum(res1) / rep)[-5:]))
+    print('{0}: reg_auto: {1}'.format(algo, (sum(res2) / rep)[-5:]))
+    print('{0}: reg_op: {1}'.format(algo, (sum(res3) / rep)[-5:]))
+    print('{0}: reg_tl: {1}'.format(algo, (sum(res4) / rep)[-5:]))
+
+    std_theory = [np.std([a[i] for a in res1]) for i in range(t)]
+    std_auto = [np.std([a[i] for a in res2]) for i in range(t)]
+    std_op = [np.std([a[i] for a in res3]) for i in range(t)]
+    std_tl = [np.std([a[i] for a in res4]) for i in range(t)]
+
+    print('\n')
+    print('std')
+    print('{0}: std_theory: {1}'.format(algo, list(std_theory[-5:])))
+    print('{0}: std_auto: {1}'.format(algo, list(std_auto)[-5:]))
+    print('{0}: std_op: {1}'.format(algo, list(std_op)[-5:]))
+    print('{0}: std_tl: {1}'.format(algo, list(std_tl)[-5:]))
+    print('\n')
+    print('\n')
+    print('\n')
+
+    if save:
+        if not os.path.exists('results/'):
+            os.mkdir('results/')
+        if not os.path.exists('results/' + gentype + '/'):
+            os.mkdir('results/' + gentype + '/')
+        if not os.path.exists('results/' + gentype + '/' + algo + '/'):
+            os.mkdir('results/' + gentype + '/' + algo + '/')
+        path = 'results/' + gentype + '/' + algo + '/'
+        file = path + str(t) + '_' + str(k) + '_' + str(d) + '_'
+        for v in exp_rate:
+            file += str(v) + '_'
+        file = file[:-1] + '.csv'
+
+        df = pd.DataFrame({'theory': sum(res1) / rep, 'auto': sum(res2) / rep, 'op': sum(res3) / rep, 'tl': sum(res4) / rep,
+                           'std_theory': std_theory, 'std_auto': std_auto, 'std_op': std_op, 'std_tl': std_tl})
+        df.to_csv(file)
+else:
     reg_theory = np.zeros(t)
     reg_auto = np.zeros(t)
     reg_op = np.zeros(t)
     reg_tl = np.zeros(t)
-
-    if algo == 'linucb':
-        algo_class = LinUCB(data)
-    elif algo == 'lints':
-        algo_class = LinTS(data)
-    elif algo == 'ucbglm':
-        algo_class = UCB_GLM(data)
-    elif algo == 'laplacets':
-        algo_class = Laplace_TS(data)
-    elif algo == 'sgdts':
-        algo_class = SGD_TS(data)
-    elif algo == 'glmtsl':
-        algo_class = GLM_TSL(data)
-    elif algo == 'gloc':
-        algo_class = GLOC(data)
-    fcts = {
-        k: getattr(algo_class, algo + methods[k])
-        for k, v in methods.items()
-    }
-    if algo == 'linucb' or algo == 'lints':
-        reg_theory += fcts['theory'](lamda = lamda, delta = delta)
-        reg_op += fcts['op'](explore_rates = exp_rate, lamda = lamda)
-        reg_auto += fcts['auto'](exp_time = 30, H=H, inte = inte, lamda=lamda)
-        reg_tl += fcts['tl'](explore_rates=exp_rate, lamda=lamda)
-    elif algo == 'ucbglm':
-        reg_theory += fcts['theory'](lamda = lamda, delta = delta)
-        reg_op += fcts['op'](explore_rates = exp_rate, lamda = lamda)
-        reg_auto += fcts['auto'](exp_time = 90, H=H, inte = inte, lamda=lamda)
-        reg_tl += fcts['tl'](explore_rates=exp_rate, lamda=lamda)
-    elif algo == 'laplacets':
-        reg_theory += fcts['theory'](lamda=lamda)
-        reg_op += fcts['op'](explore_rates=exp_rate)
-        reg_auto += fcts['auto'](exp_time=80, H=H, inte=inte)
-        reg_tl += fcts['tl'](explore_rates=exp_rate)
-    elif algo == 'glmtsl':
-        reg_theory += fcts['theory'](tau = 150,lamda=lamda)
-        reg_op += fcts['op'](explore_rates=exp_rate,tau = 150,lamda=lamda)
-        reg_auto += fcts['auto'](tau = 150, H=H, inte=inte, lamda = lamda)
-        reg_tl += fcts['tl'](explore_rates=exp_rate, tau=150, lamda=lamda)
-    elif algo == 'gloc':
-        reg_theory += fcts['theory']()
-        reg_op += fcts['op'](explore_rates=exp_rate)
-        reg_auto += fcts['auto'](H=H, inte=inte)
-        reg_tl += fcts['tl'](explore_rates=exp_rate, k = exp_rate)
-    else:
-        reg_theory += fcts['theory'](C = c, eta0 = eta0)
-        reg_op += fcts['op'](C = c, explore_rates=exp_rate)
-        reg_auto += fcts['auto'](C = c, inte=inte)
-        reg_tl += fcts['tl'](explore_rates={'eta': exp_rate, 'alpha': exp_rate}, C=c)
-    print("theory {0}, auto {1}, op {2}, tl {3}".format(reg_theory[-1], reg_auto[-1], reg_op[-1], reg_tl[-1]))
-    return reg_theory, reg_auto, reg_op, reg_tl
-
-with concurrent.futures.ProcessPoolExecutor() as executor:
-    secs = [nn for nn in range(rep)]
-    results = executor.map(func, secs)
-    results = list(results)
-res1 = [i[0] for i in list(results)]
-res2 = [i[1] for i in list(results)]
-res3 = [i[2] for i in list(results)]
-res4 = [i[2] for i in list(results)]
-
-if eff:
-    final = np.array([a[-1] for a in res2])
-    order = np.array(final).argsort()
-    res1 = [res1[order[i+2]] for i in range(pick)]
-    res2 = [res2[order[i+2]] for i in range(pick)]
-    res3 = [res3[order[i+2]] for i in range(pick)]
-    res4 = [res4[order[i+2]] for i in range(pick)]
-    rep = pick
+    for n0 in range(rep):
+        np.random.seed(n0 + seed)
+        if gentype == 'movie':
+            ind = np.random.choice(len(user), 300, replace=False)
+            theta = np.apply_along_axis(np.mean, 0, user[ind, :])
+            theta /= np.linalg.norm(theta)
+        else:
+            theta = np.random.uniform(lb, ub, (d))
+        if gentype != 'movie':
+            data = context(k, t, d, sigma, theta, theta_norm=thetan, gen_type=gentype, model=model, contextual=True)
+        else:
+            data = movie(k, t, d, sigma, true_theta=theta, theta_norm=thetan, model=model, fv=fv)
+        data.build_bandit()
+        if model not in {'linear', 'logistic'}:
+            raise ValueError('Not a valid model')
 
 
-print(algo)
-print('mean')
-print('{0}: reg_theory: {1}'.format(algo,(sum(res1)/rep)[-5:]))
-print('{0}: reg_auto: {1}'.format(algo,(sum(res2)/rep)[-5:]))
-print('{0}: reg_op: {1}'.format(algo,(sum(res3)/rep)[-5:]))
-print('{0}: reg_tl: {1}'.format(algo, (sum(res4) / rep)[-5:]))
+        if algo == 'linucb':
+            algo_class = LinUCB(data)
+        elif algo == 'lints':
+            algo_class = LinTS(data)
+        elif algo == 'ucbglm':
+            algo_class = UCB_GLM(data)
+        elif algo == 'laplacets':
+            algo_class = Laplace_TS(data)
+        elif algo == 'sgdts':
+            algo_class = SGD_TS(data)
+        elif algo == 'glmtsl':
+            algo_class = GLM_TSL(data)
+        elif algo == 'gloc':
+            algo_class = GLOC(data)
+        fcts = {
+            k: getattr(algo_class, algo + methods[k])
+            for k, v in methods.items()
+        }
+        if algo == 'linucb' or algo == 'lints':
+            reg_theory += fcts['theory'](lamda=lamda, delta=delta)
+            reg_op += fcts['op'](explore_rates=exp_rate, lamda=lamda)
+            reg_auto += fcts['auto'](exp_time=30, inte=inte, lamda=lamda)
+            reg_tl += fcts['tl'](explore_rates=exp_rate, lamda=lamda)
+        elif algo == 'ucbglm':
+            reg_theory += fcts['theory'](lamda=lamda, delta=delta)
+            reg_op += fcts['op'](explore_rates=exp_rate, lamda=lamda)
+            reg_auto += fcts['auto'](exp_time=90, inte=inte, lamda=lamda)
+            reg_tl += fcts['tl'](explore_rates=exp_rate, lamda=lamda)
+        elif algo == 'laplacets':
+            reg_theory += fcts['theory'](lamda=lamda)
+            reg_op += fcts['op'](explore_rates=exp_rate)
+            reg_auto += fcts['auto'](exp_time=80, inte=inte)
+            reg_tl += fcts['tl'](explore_rates=exp_rate)
+        elif algo == 'glmtsl':
+            reg_theory += fcts['theory'](tau=150, lamda=lamda)
+            reg_op += fcts['op'](explore_rates=exp_rate, tau=150, lamda=lamda)
+            reg_auto += fcts['auto'](tau=150, inte=inte, lamda=lamda)
+            reg_tl += fcts['tl'](explore_rates=exp_rate, tau=150, lamda=lamda)
+        elif algo == 'gloc':
+            reg_theory += fcts['theory']()
+            reg_op += fcts['op'](explore_rates=exp_rate)
+            reg_auto += fcts['auto'](inte=inte)
+            reg_tl += fcts['tl'](explore_rates=exp_rate, k=exp_rate)
+        else:
+            reg_theory += fcts['theory'](C=c, eta0=eta0)
+            reg_op += fcts['op'](C=c, explore_rates=exp_rate)
+            reg_auto += fcts['auto'](C=c, inte=inte)
+            reg_tl += fcts['tl'](explore_rates={'eta': exp_rate, 'alpha': exp_rate}, C=c)
+        print("theory {0}, auto {1}, op {2}, tl {3}".format(reg_theory[-1]/(n0+1), reg_auto[-1]/(n0+1), reg_op[-1]/(n0+1), reg_tl[-1]/(n0+1)))
 
-std_theory = [np.std([a[i] for a in res1]) for i in range(t)]
-std_auto = [np.std([a[i] for a in res2]) for i in range(t)]
-std_op = [np.std([a[i] for a in res3]) for i in range(t)]
-std_tl = [np.std([a[i] for a in res4]) for i in range(t)]
 
-print('\n')
-print('std')
-print('{0}: std_theory: {1}'.format(algo,list(std_theory[-5:])))
-print('{0}: std_auto: {1}'.format(algo,list(std_auto)[-5:]))
-print('{0}: std_op: {1}'.format(algo,list(std_op)[-5:]))
-print('{0}: std_tl: {1}'.format(algo, list(std_tl)[-5:]))
-print('\n')
-print('\n')
-print('\n')
+    if save:
+        if not os.path.exists('results/'):
+            os.mkdir('results/')
+        if not os.path.exists('results/' + gentype + '/'):
+            os.mkdir('results/' + gentype + '/')
+        if not os.path.exists('results/' + gentype + '/' + algo + '/'):
+            os.mkdir('results/' + gentype + '/' + algo + '/')
+        path = 'results/' + gentype + '/' + algo + '/'
+        file = path + str(t) + '_' + str(k) + '_' + str(d) + '_'
+        for v in exp_rate:
+            file += str(v) + '_'
+        file = file[:-1] + '.csv'
 
+        df = pd.DataFrame({'theory': reg_theory / rep, 'auto': reg_auto / rep, 'op': reg_op / rep, 'tl': reg_tl / rep})
 
-if save:
-    if not os.path.exists('results/'):
-        os.mkdir('results/')
-    if not os.path.exists('results/' + gentype + '/'):
-        os.mkdir('results/' + gentype + '/')
-    if not os.path.exists('results/' + gentype + '/' + algo + '/'):
-        os.mkdir('results/' + gentype + '/' + algo + '/')
-    path = 'results/' + gentype + '/' + algo + '/'
-    file = path + str(t) + '_' + str(k) + '_' + str(d) + '_'
-    for v in exp_rate:
-        file += str(v) + '_'
-    file = file[:-1] + '.csv'
-    
-    df = pd.DataFrame({'theory' : sum(res1)/rep, 'auto': sum(res2)/rep, 'op' : sum(res3)/rep, 'tl': sum(res4)/rep, 'std_theory': std_theory, 'std_auto': std_auto, 'std_op': std_op, 'std_tl':std_tl})
-    df.to_csv(file)
-
-
+        df.to_csv(file)
